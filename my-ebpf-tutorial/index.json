@@ -1,0 +1,13 @@
+{
+  "title": "Observability with eBPF and FlameGraphs",
+  "description": "Learn how to trace containerized applications using eBPF and visualize CPU profiling with FlameGraphs.",
+  "details": {
+    "steps": [
+      { "title": "Run Flask App", "text": "step1.md" },
+      { "title": "Trace with eBPF", "text": "step2.md" }
+    ]
+  },
+  "backend": {
+    "imageid": "ubuntu-docker"
+  }
+}
