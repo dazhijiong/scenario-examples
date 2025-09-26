@@ -79,9 +79,6 @@ Typical observations:
 - **`_PyEval_EvalFrameDefault`** = Python interpreter main loop (expected in Python workloads).  
 - **`_PyLong_New`, `PyNumber_InPlaceAdd`** = Python integer object creation and arithmetic.  
 - **`[libpython3.9.so.1.0]`** = calls into Python C API.  
-
-There is the svg result we produced:
-![FlameGraph Example](flamegraph.svg)
 ---
 
 ✅ At this point, you should have produced a `flamegraph.svg` file that visually demonstrates where your Python/Flask app spends CPU time under load.
