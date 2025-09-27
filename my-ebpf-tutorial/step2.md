@@ -1,39 +1,43 @@
-## Step 2: Profile the Application with perf and FlameGraph
+# Step 2: Profile the Application with perf and FlameGraph
 
 In this step we will use **perf** and **FlameGraph** to analyze performance of our containerized Python/Flask app.
 
 ---
 
-### 1. Load Testing the Application
+### 1. Keep the Application Busy
 
 Keep the Flask container running from **Step 1**.
 
-Run a workload generator in another terminal to stress the `/compute` endpoint:
-
-```bash
-wrk -t2 -c20 -d30s http://localhost:5000/compute
-```
-
-- `-t2` = 2 threads  
-- `-c20` = 20 concurrent connections  
-- `-d30s` = run test for 30 seconds  
-
-This ensures the application is busy and generates enough samples for profiling.
+The app already starts a CPU-intensive worker in the background (computing Fibonacci, math ops, hashing).  
+So you **don’t need an external load tool** like `wrk`. The worker itself will keep the CPU busy enough for profiling.
 
 ---
 
 ### 2. Profiling with perf (CPU FlameGraph)
 
-Find the container’s main process PID on the host:
+Find the container’s active Python processes on the host:
 
 ```bash
-docker inspect --format '{{.State.Pid}}' flask-app
+docker top flask-app
 ```
+
+You will see output like:
+
+```
+UID   PID   PPID  C   STIME   TTY  TIME     CMD
+root  5933  5912  0   ...     ?    00:00:00 python app.py
+root  5955  5933  97  ...     ?    00:02:11 python app.py
+```
+
+- **PID 5933** → parent Flask server (low CPU).  
+- **PID 5955** → worker loop consuming ~97% CPU.  
+
+👉 Always choose the **PID with highest CPU usage** (here `5955`) for profiling.
 
 Run `perf` against that PID:
 
 ```bash
-sudo perf record -F 99 -p <host_pid> -g -- sleep 30
+sudo perf record -F 99 -p 5955 -g --call-graph dwarf -- sleep 30
 sudo perf script > out.perf
 ```
 

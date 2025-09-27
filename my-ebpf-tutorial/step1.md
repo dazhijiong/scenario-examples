@@ -5,8 +5,7 @@ First, let's build a simple Python/Flask application.
 ```bash
 cat << 'EOF' > app.py
 from flask import Flask, jsonify
-from multiprocessing import Process, Value
-import math, json, hashlib, random, os, time, signal
+import math, json, hashlib, random, os, threading, signal
 
 app = Flask(__name__)
 
@@ -26,20 +25,16 @@ def heavy_computation_once():
     return parsed["hash"], fib_val
 
 def worker_loop(stop_flag):
-    # Run heavy_computation in a tight loop until stop_flag is set
-    while True:
-        if stop_flag.value == 1:
-            break
-        # perform CPU-bound work; avoid sleeps to maximize CPU usage
+    while not stop_flag["stop"]:
         heavy_computation_once()
 
-# global tracker for worker processes and stop flag
-_worker_processes = []
-_stop_flag = None
+# global tracker for worker thread
+_worker_thread = None
+_stop_flag = {"stop": False}
 
 @app.route("/")
 def hello():
-    return "Hello, CPU stress workers running."
+    return "Hello, CPU stress worker running in main process."
 
 @app.route("/compute")
 def compute():
@@ -48,61 +43,44 @@ def compute():
 
 @app.route("/status")
 def status():
-    pids = [p.pid for p in _worker_processes if p.is_alive()]
     return jsonify({
-        "worker_count": len(pids),
-        "pids": pids
+        "worker_running": _worker_thread.is_alive() if _worker_thread else False,
+        "pid": os.getpid()
     })
 
-def start_workers(num_workers):
-    global _worker_processes, _stop_flag
-    if _stop_flag is None:
-        _stop_flag = Value('i', 0)
-    # avoid starting duplicate workers
-    if any(p.is_alive() for p in _worker_processes):
+def start_worker():
+    global _worker_thread, _stop_flag
+    if _worker_thread and _worker_thread.is_alive():
         return
-    _worker_processes = []
-    for i in range(num_workers):
-        p = Process(target=worker_loop, args=(_stop_flag,))
-        p.daemon = True
-        p.start()
-        _worker_processes.append(p)
+    _stop_flag["stop"] = False
+    _worker_thread = threading.Thread(target=worker_loop, args=(_stop_flag,))
+    _worker_thread.daemon = True
+    _worker_thread.start()
 
-def stop_workers():
-    global _worker_processes, _stop_flag
-    if _stop_flag is not None:
-        _stop_flag.value = 1
-    for p in _worker_processes:
-        try:
-            p.join(timeout=2)
-        except Exception:
-            pass
-    _worker_processes = []
+def stop_worker():
+    global _worker_thread, _stop_flag
+    _stop_flag["stop"] = True
+    if _worker_thread:
+        _worker_thread.join(timeout=2)
+    _worker_thread = None
 
 def _graceful_shutdown(signum, frame):
-    stop_workers()
-    # allow Flask to exit
+    stop_worker()
     try:
         os._exit(0)
     except SystemExit:
         raise
 
 if __name__ == "__main__":
-    # number of worker processes (default: all logical CPUs)
-    default_workers = os.cpu_count() or 1
-    num_workers = int(os.environ.get("STRESS_WORKERS", default_workers))
-
-    # optional: if you want NOT to auto-start, set env STRESS_AUTOSTART=0
     autostart = os.environ.get("STRESS_AUTOSTART", "1")
     if autostart == "1":
-        start_workers(num_workers)
+        start_worker()
 
-    # handle SIGTERM/SIGINT to stop workers cleanly
     signal.signal(signal.SIGTERM, _graceful_shutdown)
     signal.signal(signal.SIGINT, _graceful_shutdown)
 
-    # Run Flask (use 0.0.0.0 for container)
     app.run(host="0.0.0.0", port=5000)
+
 
 
 EOF
