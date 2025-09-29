@@ -39,7 +39,8 @@ def hello():
 @app.route("/compute")
 def compute():
     h, f = heavy_computation_once()
-    return f"Hash: {h[:10]}, Fib(10)={f}"
+    print
+    return f"Hash: {h[:10]}, Fib(10)={f}, kth devops"
 
 @app.route("/status")
 def status():
