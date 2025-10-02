@@ -32,13 +32,13 @@ root  5955  5933  97  ...     ?    00:02:11 python app.py
 
 👉 Always choose the **PID with highest CPU usage** (here `5955`) for profiling.
 
-````markdown
+
 Run `perf` against that PID to **record stack samples and prepare data for FlameGraph**:
 
 ```bash
 sudo perf record -F 99 -p 5955 -g --call-graph dwarf -- sleep 30
 sudo perf script > out.perf
-````
+```
 
 * **`perf record`**
 
@@ -57,13 +57,13 @@ Install FlameGraph tools:
 git clone https://github.com/brendangregg/Flamegraph.git
 ```
 
-````markdown
+
 Generate the folded stacks and create the **FlameGraph** visualization:
 
 ```bash
 ./Flamegraph/stackcollapse-perf.pl out.perf > out.folded
 ./Flamegraph/flamegraph.pl out.folded > flamegraph.svg
-````
+```
 
 * **`stackcollapse-perf.pl`**
 
