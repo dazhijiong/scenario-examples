@@ -108,13 +108,13 @@ EOF
 
 ```
 
-````markdown
+
 Build and run the container:
 
 ```bash
 docker build -t flask-app .
 docker run -d --name flask-app -p 5000:5000 -e STRESS_WORKERS=1 flask-app
-````
+```
 
 The `docker build -t flask-app .` command builds a Docker image from the current directory and tags it as `flask-app` so it can be referenced easily later. The `docker run -d --name flask-app -p 5000:5000 -e STRESS_WORKERS=1 flask-app` command starts a new container from that image in detached mode, names it `flask-app` for easier management, maps port 5000 of the container to port 5000 on the host so you can access the Flask app in a browser, and sets the `STRESS_WORKERS=1` environment variable to automatically start one CPU stress worker inside the container.
 
@@ -124,3 +124,4 @@ Test the application:
 ```bash
 curl http://localhost:5000/
 ```
+You should see the output: "Hello, this is the tutorial of hanzhizh in kth devops.", which is an easter egg.
